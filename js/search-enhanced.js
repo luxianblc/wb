@@ -776,12 +776,12 @@ class EnhancedSearch {
     // 快速示例
     quickExamples() {
         const examples = [
-            '周杰伦',
-            'lyric:夏天',
-            '陈奕迅 -live',
-            '纯音乐 放松',
-            '英文经典',
-            '"Yesterday Once More"'
+            '无限暖暖',
+            '日式摇滚',
+            'jpop',
+            'yoasobi',
+            '初音未来',
+            '百闻牌'
         ];
 
         const randomExample = examples[Math.floor(Math.random() * examples.length)];
