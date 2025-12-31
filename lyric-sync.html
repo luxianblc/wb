@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌词同步 - 音乐播放器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/lyric-sync.css">
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="lyric-sync-container">
+        <!-- 顶部控制栏 -->
+        <div class="sync-header">
+            <div class="sync-header-left">
+                <button class="btn-icon" onclick="goBack()" title="返回">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="sync-title">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>歌词同步</span>
+                </div>
+            </div>
+            
+            <div class="sync-status">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">准备就绪</span>
+            </div>
+            
+            <div class="sync-controls">
+                <button class="btn btn-primary" id="startSyncBtn">
+                    <i class="fas fa-play"></i> 开始同步
+                </button>
+                <button class="btn btn-secondary" id="stopSyncBtn" disabled>
+                    <i class="fas fa-stop"></i> 停止
+                </button>
+                <button class="btn-icon" onclick="toggleFullscreenMode()" title="全屏模式 (F)">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="sync-content">
+            <!-- 左侧：歌曲信息和控制 -->
+            <div class="sync-sidebar">
+                <div class="song-card">
+                    <div class="song-cover-container">
+                        <img id="songCover" src="https://via.placeholder.com/300?text=专辑封面" 
+                             alt="专辑封面" class="song-cover">
+                        <div class="song-cover-overlay">
+                            <div class="cover-play-btn" onclick="playCurrentSong()">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="song-info">
+                        <h2 class="song-title" id="songTitle">等待歌曲播放...</h2>
+                        <p class="song-artist" id="songArtist">请在网易云音乐APP播放歌曲</p>
+                        <p class="song-album" id="songAlbum">未知专辑</p>
+                    </div>
+
+                    <!-- 播放进度 -->
+                    <div class="progress-section">
+                        <div class="progress-bar" id="progressBar">
+                            <div class="progress-fill" id="progressFill"></div>
+                            <div class="progress-handle"></div>
+                        </div>
+                        <div class="progress-time">
+                            <span id="currentTime">0:00</span>
+                            <span>/</span>
+                            <span id="totalTime">0:00</span>
+                        </div>
+                    </div>
+
+                    <!-- 播放控制 -->
+                    <div class="playback-controls">
+                        <button class="btn-icon" onclick="skipBackward()" title="后退5秒">
+                            <i class="fas fa-backward"></i>
+                        </button>
+                        <button class="btn-icon btn-play" onclick="togglePlayback()" id="playBtn">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button class="btn-icon" onclick="skipForward()" title="前进5秒">
+                            <i class="fas fa-forward"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 同步设置 -->
+                <div class="sync-settings">
+                    <h3><i class="fas fa-cog"></i> 同步设置</h3>
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label for="syncInterval">同步间隔</label>
+                            <div class="range-container">
+                                <input type="range" id="syncInterval" min="1" max="10" value="2" 
+                                       onchange="updateSyncInterval(this.value)">
+                                <span id="intervalValue">2秒</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="lyricOffset">歌词偏移</label>
+                            <div class="range-container">
+                                <input type="range" id="lyricOffset" min="-5" max="5" value="0" 
+                                       onchange="updateLyricOffset(this.value)">
+                                <span id="offsetValue">0秒</span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <label for="autoScroll">自动滚动</label>
+                            <label class="switch">
+                                <input type="checkbox" id="autoScroll" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label for="lyricSize">歌词大小</label>
+                            <div class="range-container">
+                                <input type="range" id="lyricSize" min="14" max="24" value="18" 
+                                       onchange="updateLyricSize(this.value)">
+                                <span id="sizeValue">18px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧：歌词显示区域 -->
+            <div class="sync-lyrics">
+                <div class="lyrics-header">
+                    <h3><i class="fas fa-music"></i> 实时歌词</h3>
+                    <div class="lyrics-stats">
+                        <span id="lyricsCount">0行</span>
+                        <span id="syncTime">--</span>
+                    </div>
+                </div>
+                
+                <div class="lyrics-container" id="lyricsContainer">
+                    <div class="time-tooltip" id="timeTooltip"></div>
+                    
+                    <!-- 空状态 -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-icon">
+                            <i class="fas fa-sync-alt"></i>
+                        </div>
+                        <h3>等待同步开始</h3>
+                        <p>点击"开始同步"按钮后，这里将显示实时歌词</p>
+                        <p class="empty-hint">
+                            <i class="fas fa-lightbulb"></i> 
+                            提示：在网易云音乐APP播放歌曲后，点击开始同步按钮
+                        </p>
+                    </div>
+
+                    <!-- 歌词行将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部信息栏 -->
+        <div class="sync-footer">
+            <div class="footer-info">
+                <span id="syncInfo">尚未开始同步</span>
+            </div>
+            <div class="footer-actions">
+                <button class="btn-text" onclick="openLogin()">
+                    <i class="fas fa-user"></i> 账号管理
+                </button>
+                <button class="btn-text" onclick="clearLyrics()">
+                    <i class="fas fa-trash"></i> 清除歌词
+                </button>
+                <button class="btn-text" onclick="exportLyrics()">
+                    <i class="fas fa-download"></i> 导出歌词
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全屏模式容器 -->
+    <div class="fullscreen-mode" id="fullscreenMode">
+        <div class="fullscreen-background"></div>
+        <div class="fullscreen-overlay"></div>
+        <div class="fullscreen-content">
+            <div class="fullscreen-header">
+                <h2 class="fullscreen-song-name" id="fullscreenSongName">等待歌曲播放...</h2>
+                <p class="fullscreen-song-artist" id="fullscreenSongArtist">未知歌手</p>
+                <div class="fullscreen-time">
+                    <span id="fullscreenCurrentTime">0:00</span>
+                    <span>/</span>
+                    <span id="fullscreenTotalTime">0:00</span>
+                </div>
+            </div>
+            
+            <div class="fullscreen-lyrics" id="fullscreenLyrics">
+                <div class="fullscreen-empty">
+                    <i class="fas fa-music"></i>
+                    <p>开始同步后显示歌词</p>
+                </div>
+            </div>
+            
+            <div class="fullscreen-controls">
+                <button class="btn-icon" onclick="exitFullscreenMode()" title="退出全屏 (ESC)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载动画 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">正在连接网易云音乐...</div>
+        </div>
+    </div>
+
+    <script src="js/lyric-sync-enhanced.js"></script>
+</body>
+</html>
