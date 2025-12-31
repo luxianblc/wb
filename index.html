@@ -30,10 +30,10 @@
     <!-- 顶部搜索栏 - 直接嵌入 -->
     <header class="netease-header">
         <div class="header-container">
-            <div class="logo">
+            <!-- <div class="logo">
                 <i class="fas fa-music"></i>
                 <span>音乐播放器</span>
-            </div>
+            </div> -->
 
             <div class="search-container">
                 <div class="search-box">
@@ -67,7 +67,7 @@
                 </button>
 
                 <button onclick="performSearch()" class="search-btn">
-                    <i class="fas fa-search"></i> 智能搜索
+                    <i class="fas fa-search"></i> 搜索
                 </button>
             </div>
 
@@ -286,9 +286,9 @@
                 <a href="#search" class="nav-item" onclick="switchSection('search')">
                     <i class="fas fa-search"></i> 搜索
                 </a>
-                <a href="#library" class="nav-item" onclick="switchSection('library')">
+                <!-- <a href="#library" class="nav-item" onclick="switchSection('library')">
                     <i class="fas fa-music"></i> 音乐库
-                </a>
+                </a> -->
                 <a href="#playlists" class="nav-item" onclick="switchSection('playlists')">
                     <i class="fas fa-list"></i> 歌单
                 </a>
@@ -385,28 +385,28 @@
                         <h2><i class="fas fa-palette"></i> 主题设置</h2>
                         <div class="theme-options">
                             <div class="theme-option active" onclick="switchThemeMode('default')">
-                                <div class="theme-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                <!-- <div class="theme-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                                     <i class="fas fa-check"></i>
-                                </div>
+                                </div> -->
                                 <h4><i class="fas fa-music"></i> 默认主题</h4>
                                 <p>清爽简洁的界面设计，专注于音乐播放体验</p>
                             </div>
 
                             <div class="theme-option" onclick="switchThemeMode('cover-blur')" id="coverBlurTheme">
-                                <div class="theme-preview" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                <!-- <div class="theme-preview" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                                     <i class="fas fa-check"></i>
-                                </div>
+                                </div> -->
                                 <h4><i class="fas fa-image"></i> 专辑封面背景</h4>
                                 <p>将正在播放的歌曲专辑封面作为模糊背景，沉浸感更强</p>
                             </div>
 
-                            <div class="theme-option" onclick="switchThemeMode('minimal')">
+                            <!-- <div class="theme-option" onclick="switchThemeMode('minimal')">
                                 <div class="theme-preview" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                                     <i class="fas fa-check"></i>
                                 </div>
                                 <h4><i class="fas fa-compress-alt"></i> 极简模式</h4>
                                 <p>最小化界面元素，专注于音乐本身</p>
-                            </div>
+                            </div> -->
                         </div>
 
                         <div class="advanced-filters">
@@ -415,13 +415,13 @@
                                 <label>
                                     <input type="range" id="blurIntensity" min="0" max="50" value="30" 
                                            oninput="updateBlurIntensity(this.value)">
-                                    <span>背景模糊强度: <span id="blurValue">30</span>px</span>
+                                    <span>背景模糊强度: <span id="blurValue">1</span>px</span>
                                 </label>
 
                                 <label>
                                     <input type="range" id="backgroundOpacity" min="0" max="100" value="40" 
                                            oninput="updateBackgroundOpacity(this.value)">
-                                    <span>背景透明度: <span id="opacityValue">40</span>%</span>
+                                    <span>背景透明度: <span id="opacityValue">100</span>%</span>
                                 </label>
 
                                 <label style="margin-top: 15px;">
@@ -434,12 +434,12 @@
 
                         <div class="theme-current">
                             <h4><i class="fas fa-info-circle"></i> 当前设置</h4>
-                            <div class="current-settings">
+                            <!-- <div class="current-settings">
                                 <p>主题模式: <span id="currentThemeMode">默认主题</span></p>
                                 <p>模糊强度: <span id="currentBlurValue">30px</span></p>
                                 <p>背景透明度: <span id="currentOpacityValue">40%</span></p>
                                 <p>自动切换: <span id="currentAutoSwitch">开启</span></p>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                 </div>
