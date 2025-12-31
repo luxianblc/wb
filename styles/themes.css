@@ -1,0 +1,237 @@
+/* 主题相关样式 */
+
+
+/* 背景模糊效果核心样式 */
+
+.background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: all 0.8s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.background-overlay.active {
+    opacity: 0.5;
+}
+
+.background-overlay.blur {
+    filter: blur(30px) brightness(0.7);
+    transform: scale(1.05);
+}
+
+
+/* 背景渐变动画 */
+
+@keyframes backgroundFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(1) translateY(10px);
+    }
+    to {
+        opacity: 0.5;
+        transform: scale(1.05) translateY(0);
+    }
+}
+
+.background-overlay.active.blur {
+    animation: backgroundFadeIn 0.8s ease-out forwards;
+}
+
+
+/* 默认背景（当没有专辑封面时） */
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -2;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    opacity: 0.1;
+}
+
+[data-theme="dark"] body::before {
+    background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%);
+    opacity: 0.3;
+}
+
+
+/* 主题页面样式 */
+
+.theme-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.theme-card {
+    background-color: rgba(var(--card-bg-rgb, 255, 255, 255), 0.85);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+}
+
+[data-theme="dark"] .theme-card {
+    background-color: rgba(var(--card-bg-rgb, 30, 30, 30), 0.85);
+}
+
+.theme-card h2 {
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary-color);
+}
+
+.theme-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.theme-option {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 2px solid var(--border-color);
+    border-radius: 15px;
+    padding: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+
+[data-theme="dark"] .theme-option {
+    background-color: rgba(50, 50, 50, 0.6);
+}
+
+.theme-option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.theme-option.active {
+    border-color: var(--primary-color);
+    background-color: rgba(230, 0, 38, 0.1);
+}
+
+.theme-preview {
+    height: 180px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-option h4 {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-option p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+[data-theme="dark"] .theme-option p {
+    color: #aaa;
+}
+
+.theme-option .fa-check {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    color: var(--primary-color);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.theme-option.active .fa-check {
+    opacity: 1;
+}
+
+.theme-current {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    backdrop-filter: blur(5px);
+}
+
+[data-theme="dark"] .theme-current {
+    background-color: rgba(50, 50, 50, 0.3);
+}
+
+.theme-current h4 {
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.current-settings p {
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.current-settings span {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+
+/* 极简模式 */
+
+.theme-minimal .netease-player {
+    background: rgba(255, 255, 255, 0.9);
+    border-top: none;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.theme-minimal .nav-menu {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid var(--border-color);
+}
+
+.theme-minimal .content-section {
+    background: transparent;
+    padding: 0;
+}
+
+.theme-minimal .theme-card,
+.theme-minimal .results-container,
+.theme-minimal .lyrics-card {
+    background: rgba(var(--card-bg-rgb, 255, 255, 255), 0.9);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme="dark"].theme-minimal .theme-card,
+[data-theme="dark"].theme-minimal .results-container,
+[data-theme="dark"].theme-minimal .lyrics-card {
+    background: rgba(var(--card-bg-rgb, 30, 30, 30), 0.9);
+}
+
+.theme-minimal .header-container {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.theme-minimal .welcome-section {
+    border: 2px solid var(--primary-color);
+}
