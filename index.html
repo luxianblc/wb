@@ -20,136 +20,146 @@
     <!-- 图标库 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- 不再需要引入 QRCode.js，因为使用 API 返回的 base64 图片 -->
-</head>
-
-<body>
-    <!-- 背景覆盖层 -->
-    <div id="backgroundOverlay" class="background-overlay"></div>
-
-    <!-- 顶部搜索栏 - 直接嵌入 -->
-    <header class="netease-header">
-        <div class="header-container">
-            <!-- <div class="logo">
-                <i class="fas fa-music"></i>
-                <span>音乐播放器</span>
-            </div> -->
-
-            <div class="search-container">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchInput" placeholder="输入关键词或高级搜索语法..." onkeypress="if(event.key === 'Enter') performSearch()">
-                    <button onclick="clearSearch()" class="clear-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    <div class="search-suggestions" id="searchSuggestions"></div>
-                </div>
-
-                <div class="search-options">
-                    <select id="searchType" onchange="updateSearchType()">
-                        <option value="1">单曲</option>
-                        <option value="10">专辑</option>
-                        <option value="100">歌手</option>
-                        <option value="1000">歌单</option>
-                        <option value="1006">歌词</option>
-                        <option value="1004">MV</option>
-                    </select>
-
-                    <select id="searchOrder" onchange="updateSearchParams()">
-                        <option value="hot">按热度</option>
-                        <option value="time">按时间</option>
-                        <option value="score">按评分</option>
-                    </select>
-                </div>
-
-                <button onclick="toggleAdvancedSearch()" class="adv-search-btn" title="高级搜索">
-                    <i class="fas fa-sliders-h"></i>
-                </button>
-
-                <button onclick="performSearch()" class="search-btn">
-                    <i class="fas fa-search"></i> 搜索
-                </button>
-            </div>
-
-            <div class="header-actions">
-                <button onclick="toggleTheme()" class="theme-toggle">
-                    <i class="fas fa-moon"></i>
-                </button>
-                <button onclick="quickExamples()" class="examples-btn" title="搜索示例">
-                    <i class="fas fa-lightbulb"></i>
-                </button>
-                
-                <!-- 修改后的登录按钮区域 -->
-                <button class="login-btn" title="点击登录" onclick="login()" id="userLoginBtn">
-                    <div class="login-btn-content">
-                        <i class="fas fa-user"></i>
-                        <span class="login-btn-text" id="loginBtnText">登录</span>
-                    </div>
-                </button>
-            </div>
-        </div>
-
-        <!-- 高级搜索面板 -->
-        <div class="advanced-search-panel" id="advancedSearchPanel">
-            <div class="advanced-search-content">
-                <h4><i class="fas fa-cog"></i> 高级搜索选项</h4>
-
-                <div class="advanced-filters">
-                    <div class="filter-group">
-                        <label>
-                            <input type="checkbox" id="chkOfficial" checked>
-                            <span>仅官方版本</span>
-                        </label>
-                        <label>
-                            <input type="checkbox" id="chkHQ">
-                            <span>高品质音质</span>
-                        </label>
-                        <label>
-                            <input type="checkbox" id="chkNoCopyright">
-                            <span>排除无版权</span>
-                        </label>
-                    </div>
-
-                    <div class="filter-group">
-                        <label>时间范围：</label>
-                        <div class="time-filters">
-                            <button class="time-filter active" onclick="setTimeFilter('all')">全部</button>
-                            <button class="time-filter" onclick="setTimeFilter('year')">一年内</button>
-                            <button class="time-filter" onclick="setTimeFilter('month')">一个月内</button>
-                            <button class="time-filter" onclick="setTimeFilter('week')">一周内</button>
-                        </div>
-                    </div>
-
-                    <div class="filter-group">
-                        <label>每页数量：</label>
-                        <input type="range" id="searchLimit" min="10" max="100" value="30" onchange="updateLimitValue()">
-                        <span id="limitValue">30</span>
-                    </div>
-
-                    <div class="search-syntax">
-                        <h5><i class="fas fa-code"></i> 搜索语法提示：</h5>
-                        <ul>
-                            <li><code>lyric:关键词</code> - 搜索歌词</li>
-                            <li><code>-排除词</code> - 排除关键词</li>
-                            <li><code>"精确匹配"</code> - 精确搜索</li>
-                            <li><code>artist:歌手名</code> - 按歌手搜索</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="advanced-actions">
-                    <button onclick="applyAdvancedFilters()" class="btn-primary">
-                        <i class="fas fa-check"></i> 应用筛选
-                    </button>
-                    <button onclick="resetAdvancedFilters()" class="btn-secondary">
-                        <i class="fas fa-redo"></i> 重置
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
     <style>
+    /* 折叠按钮样式 */
+    .collapse-btn {
+        position: fixed;
+        z-index: 1000;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .collapse-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .collapse-btn i {
+        font-size: 18px;
+        transition: transform 0.3s ease;
+    }
+
+    /* 搜索栏折叠按钮位置 */
+    .collapse-header-btn {
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+    }
+
+    /* 播放器折叠按钮位置 */
+    .collapse-player-btn {
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+    }
+
+    /* 当搜索栏隐藏时的按钮位置调整 */
+    .netease-header.hidden + .collapse-header-btn {
+        top: 10px;
+        right: 10px;
+    }
+
+    /* 当播放器隐藏时的按钮位置调整 */
+    .netease-player.hidden + .collapse-player-btn {
+        bottom: 10px;
+        right: 10px;
+    }
+
+    /* 隐藏状态的样式 */
+    .netease-header.hidden {
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .netease-player.hidden {
+        transform: translateY(100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* 搜索栏和播放器的过渡效果 */
+    .netease-header, .netease-player {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 当搜索栏隐藏时调整主要内容区 */
+    .netease-header.hidden ~ .main-container {
+        padding-top: 20px;
+    }
+
+    /* 当播放器隐藏时调整页面底部 */
+    .netease-player.hidden {
+        height: 0;
+        overflow: hidden;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .collapse-btn {
+            width: 36px;
+            height: 36px;
+        }
+        
+        .collapse-btn i {
+            font-size: 16px;
+        }
+        
+        .collapse-header-btn {
+            top: 10px;
+            right: 10px;
+        }
+        
+        .collapse-player-btn {
+            bottom: 10px;
+            right: 10px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .collapse-btn {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .collapse-btn i {
+            font-size: 14px;
+        }
+    }
+
+    /* 旋转动画 */
+    @keyframes rotateIn {
+        from {
+            transform: rotate(-180deg);
+            opacity: 0;
+        }
+        to {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    @keyframes rotateOut {
+        from {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+        to {
+            transform: rotate(180deg);
+            opacity: 0;
+        }
+    }
+
     /* 登录按钮样式优化 */
     .login-btn {
         position: relative;
@@ -275,6 +285,140 @@
         }
     }
     </style>
+    
+    <!-- 不再需要引入 QRCode.js，因为使用 API 返回的 base64 图片 -->
+</head>
+
+<body>
+    <!-- 背景覆盖层 -->
+    <div id="backgroundOverlay" class="background-overlay"></div>
+
+    <!-- 搜索栏折叠按钮 -->
+    <button class="collapse-btn collapse-header-btn" id="collapseHeaderBtn" onclick="toggleHeader()">
+        <i class="fas fa-chevron-up" id="headerBtnIcon"></i>
+    </button>
+
+    <!-- 顶部搜索栏 - 直接嵌入 -->
+    <header class="netease-header" id="neteaseHeader">
+        <div class="header-container">
+            <!-- <div class="logo">
+                <i class="fas fa-music"></i>
+                <span>音乐播放器</span>
+            </div> -->
+
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="输入关键词或高级搜索语法..." onkeypress="if(event.key === 'Enter') performSearch()">
+                    <button onclick="clearSearch()" class="clear-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
+                </div>
+
+                <div class="search-options">
+                    <select id="searchType" onchange="updateSearchType()">
+                        <option value="1">单曲</option>
+                        <option value="10">专辑</option>
+                        <option value="100">歌手</option>
+                        <option value="1000">歌单</option>
+                        <option value="1006">歌词</option>
+                        <option value="1004">MV</option>
+                    </select>
+
+                    <select id="searchOrder" onchange="updateSearchParams()">
+                        <option value="hot">按热度</option>
+                        <option value="time">按时间</option>
+                        <option value="score">按评分</option>
+                    </select>
+                </div>
+
+                <button onclick="toggleAdvancedSearch()" class="adv-search-btn" title="高级搜索">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+
+                <button onclick="performSearch()" class="search-btn">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </div>
+
+            <div class="header-actions">
+                <button onclick="toggleTheme()" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button onclick="quickExamples()" class="examples-btn" title="搜索示例">
+                    <i class="fas fa-lightbulb"></i>
+                </button>
+                
+                <!-- 修改后的登录按钮区域 -->
+                <button class="login-btn" title="点击登录" onclick="login()" id="userLoginBtn">
+                    <div class="login-btn-content">
+                        <i class="fas fa-user"></i>
+                        <span class="login-btn-text" id="loginBtnText">登录</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 高级搜索面板 -->
+        <div class="advanced-search-panel" id="advancedSearchPanel">
+            <div class="advanced-search-content">
+                <h4><i class="fas fa-cog"></i> 高级搜索选项</h4>
+
+                <div class="advanced-filters">
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="chkOfficial" checked>
+                            <span>仅官方版本</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="chkHQ">
+                            <span>高品质音质</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="chkNoCopyright">
+                            <span>排除无版权</span>
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>时间范围：</label>
+                        <div class="time-filters">
+                            <button class="time-filter active" onclick="setTimeFilter('all')">全部</button>
+                            <button class="time-filter" onclick="setTimeFilter('year')">一年内</button>
+                            <button class="time-filter" onclick="setTimeFilter('month')">一个月内</button>
+                            <button class="time-filter" onclick="setTimeFilter('week')">一周内</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>每页数量：</label>
+                        <input type="range" id="searchLimit" min="10" max="100" value="30" onchange="updateLimitValue()">
+                        <span id="limitValue">30</span>
+                    </div>
+
+                    <div class="search-syntax">
+                        <h5><i class="fas fa-code"></i> 搜索语法提示：</h5>
+                        <ul>
+                            <li><code>lyric:关键词</code> - 搜索歌词</li>
+                            <li><code>-排除词</code> - 排除关键词</li>
+                            <li><code>"精确匹配"</code> - 精确搜索</li>
+                            <li><code>artist:歌手名</code> - 按歌手搜索</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="advanced-actions">
+                    <button onclick="applyAdvancedFilters()" class="btn-primary">
+                        <i class="fas fa-check"></i> 应用筛选
+                    </button>
+                    <button onclick="resetAdvancedFilters()" class="btn-secondary">
+                        <i class="fas fa-redo"></i> 重置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
 
     <!-- 主要内容区 -->
     <main class="main-container">
@@ -348,13 +492,11 @@
             </section>
 
             <!-- 歌词页面 -->
-            <!-- 歌词页面 -->
             <section id="lyrics" class="content-section">
                 <div class="lyrics-page">
                     <div class="lyrics-card" id="lyricsCard">
                         <div class="lyrics-controls">
                             <div class="lyrics-buttons">
-                                
                                 <button class="lyric-btn" onclick="toggleUIHiddenMode()" id="uiToggleBtn">
                                     <i class="fas fa-eye-slash"></i>
                                     <span>隐藏界面</span>
@@ -385,28 +527,14 @@
                         <h2><i class="fas fa-palette"></i> 主题设置</h2>
                         <div class="theme-options">
                             <div class="theme-option active" onclick="switchThemeMode('default')">
-                                <!-- <div class="theme-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                    <i class="fas fa-check"></i>
-                                </div> -->
                                 <h4><i class="fas fa-music"></i> 默认主题</h4>
                                 <p>简洁的界面</p>
                             </div>
 
                             <div class="theme-option" onclick="switchThemeMode('cover-blur')" id="coverBlurTheme">
-                                <!-- <div class="theme-preview" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                                    <i class="fas fa-check"></i>
-                                </div> -->
                                 <h4><i class="fas fa-image"></i> 专辑封面背景</h4>
                                 <p>歌曲专辑封面作为模糊背景</p>
                             </div>
-
-                            <!-- <div class="theme-option" onclick="switchThemeMode('minimal')">
-                                <div class="theme-preview" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                                    <i class="fas fa-check"></i>
-                                </div>
-                                <h4><i class="fas fa-compress-alt"></i> 极简模式</h4>
-                                <p>最小化界面元素，专注于音乐本身</p>
-                            </div> -->
                         </div>
 
                         <div class="advanced-filters">
@@ -447,8 +575,13 @@
         </div>
     </main>
 
+    <!-- 播放器折叠按钮 -->
+    <button class="collapse-btn collapse-player-btn" id="collapsePlayerBtn" onclick="togglePlayer()">
+        <i class="fas fa-chevron-down" id="playerBtnIcon"></i>
+    </button>
+
     <!-- 底部播放器 - 直接嵌入 -->
-    <div class="netease-player">
+    <div class="netease-player" id="neteasePlayer">
         <div class="player-container">
             <div class="player-info" onclick="goToLyricsPage()">
                 <img id="currentSongCover" src="https://via.placeholder.com/50" alt="专辑封面">
@@ -515,7 +648,113 @@
     <script src="js/playlists.js"></script> <!-- 新增：我的歌单JS -->
 
     <script>
-        
+        // 折叠功能管理
+        let isHeaderVisible = true;
+        let isPlayerVisible = true;
+
+        // 切换搜索栏显示/隐藏
+        function toggleHeader() {
+            const header = document.getElementById('neteaseHeader');
+            const headerBtn = document.getElementById('collapseHeaderBtn');
+            const headerBtnIcon = document.getElementById('headerBtnIcon');
+            
+            isHeaderVisible = !isHeaderVisible;
+            
+            if (isHeaderVisible) {
+                // 显示搜索栏
+                header.classList.remove('hidden');
+                headerBtnIcon.className = 'fas fa-chevron-up';
+                headerBtn.setAttribute('title', '隐藏搜索栏');
+                headerBtnIcon.style.animation = 'rotateIn 0.3s ease-out';
+            } else {
+                // 隐藏搜索栏
+                header.classList.add('hidden');
+                headerBtnIcon.className = 'fas fa-chevron-down';
+                headerBtn.setAttribute('title', '显示搜索栏');
+                headerBtnIcon.style.animation = 'rotateOut 0.3s ease-in';
+            }
+            
+            // 保存状态到localStorage
+            localStorage.setItem('headerVisible', isHeaderVisible);
+            
+            // 动画结束后清除动画
+            setTimeout(() => {
+                headerBtnIcon.style.animation = '';
+            }, 300);
+        }
+
+        // 切换播放器显示/隐藏
+        function togglePlayer() {
+            const player = document.getElementById('neteasePlayer');
+            const playerBtn = document.getElementById('collapsePlayerBtn');
+            const playerBtnIcon = document.getElementById('playerBtnIcon');
+            
+            isPlayerVisible = !isPlayerVisible;
+            
+            if (isPlayerVisible) {
+                // 显示播放器
+                player.classList.remove('hidden');
+                playerBtnIcon.className = 'fas fa-chevron-down';
+                playerBtn.setAttribute('title', '隐藏播放器');
+                playerBtnIcon.style.animation = 'rotateIn 0.3s ease-out';
+            } else {
+                // 隐藏播放器
+                player.classList.add('hidden');
+                playerBtnIcon.className = 'fas fa-chevron-up';
+                playerBtn.setAttribute('title', '显示播放器');
+                playerBtnIcon.style.animation = 'rotateOut 0.3s ease-in';
+            }
+            
+            // 保存状态到localStorage
+            localStorage.setItem('playerVisible', isPlayerVisible);
+            
+            // 动画结束后清除动画
+            setTimeout(() => {
+                playerBtnIcon.style.animation = '';
+            }, 300);
+        }
+
+        // 恢复折叠状态
+        function restoreCollapseStates() {
+            // 检查localStorage中的状态
+            const savedHeaderVisible = localStorage.getItem('headerVisible');
+            const savedPlayerVisible = localStorage.getItem('playerVisible');
+            
+            if (savedHeaderVisible !== null) {
+                isHeaderVisible = savedHeaderVisible === 'true';
+                const header = document.getElementById('neteaseHeader');
+                const headerBtnIcon = document.getElementById('headerBtnIcon');
+                
+                if (!isHeaderVisible) {
+                    header.classList.add('hidden');
+                    headerBtnIcon.className = 'fas fa-chevron-down';
+                    document.getElementById('collapseHeaderBtn').setAttribute('title', '显示搜索栏');
+                }
+            }
+            
+            if (savedPlayerVisible !== null) {
+                isPlayerVisible = savedPlayerVisible === 'true';
+                const player = document.getElementById('neteasePlayer');
+                const playerBtnIcon = document.getElementById('playerBtnIcon');
+                
+                if (!isPlayerVisible) {
+                    player.classList.add('hidden');
+                    playerBtnIcon.className = 'fas fa-chevron-up';
+                    document.getElementById('collapsePlayerBtn').setAttribute('title', '显示播放器');
+                }
+            }
+        }
+
+        // 初始化折叠按钮
+        function initCollapseButtons() {
+            // 设置初始标题
+            document.getElementById('collapseHeaderBtn').setAttribute('title', '隐藏搜索栏');
+            document.getElementById('collapsePlayerBtn').setAttribute('title', '隐藏播放器');
+            
+            // 恢复之前的折叠状态
+            restoreCollapseStates();
+        }
+
         // 初始化应用
         function initApp() {
             console.log('开始初始化应用...');
@@ -524,6 +763,9 @@
             if (typeof setupTheme === 'function') {
                 setupTheme();
             }
+            
+            // 初始化折叠按钮
+            initCollapseButtons();
             
             // 初始化播放器
             if (typeof initPlayer === 'function') {
@@ -573,6 +815,84 @@
                 initApp();
             }, 100);
         });
+
+        // 全局快捷键支持
+        document.addEventListener('keydown', function(event) {
+            // Ctrl+H 切换搜索栏 (H for Header)
+            if (event.ctrlKey && event.key === 'h') {
+                event.preventDefault();
+                toggleHeader();
+            }
+            
+            // Ctrl+P 切换播放器 (P for Player)
+            if (event.ctrlKey && event.key === 'p') {
+                event.preventDefault();
+                togglePlayer();
+            }
+            
+            // Ctrl+Shift+H 同时切换搜索栏和播放器
+            if (event.ctrlKey && event.shiftKey && event.key === 'H') {
+                event.preventDefault();
+                toggleHeader();
+                togglePlayer();
+            }
+        });
+
+        // 添加折叠按钮的工具提示
+        document.addEventListener('mouseover', function(event) {
+            if (event.target.closest('.collapse-btn')) {
+                const btn = event.target.closest('.collapse-btn');
+                if (!btn.hasAttribute('data-tooltip-added')) {
+                    btn.setAttribute('data-tooltip-added', 'true');
+                    btn.addEventListener('mouseenter', function() {
+                        this.setAttribute('data-show-tooltip', 'true');
+                    });
+                    btn.addEventListener('mouseleave', function() {
+                        this.removeAttribute('data-show-tooltip');
+                    });
+                }
+            }
+        });
     </script>
+
+    <style>
+        /* 工具提示样式 */
+        .collapse-btn[data-show-tooltip]::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1002;
+            margin-bottom: 8px;
+            pointer-events: none;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .collapse-btn[data-show-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.8);
+            margin-bottom: -2px;
+            z-index: 1002;
+            pointer-events: none;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 </body>
 </html>
