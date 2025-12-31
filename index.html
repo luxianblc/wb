@@ -1,858 +1,898 @@
-// 搜索增强功能（简化版）
-// 修改搜索中的播放按钮，针对VIP歌曲使用专门函数
-window.playSongEnhanced = async function(songId, songName) {
-    // 先检查歌曲类型
-    try {
-        const detailUrl = buildApiUrl('/song/detail', { ids: songId });
-        const detailResponse = await fetch(detailUrl);
-        const detailData = await detailResponse.json();
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="referrer" content="no-referrer">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音乐播放器</title>
+    
+    <!-- JavaScript 文件 -->
+    <script src="js/search-enhanced.js"></script>
+    
+    <!-- 样式表 -->
+    <link rel="stylesheet" href="styles/netease.css">
+    <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/theme.css">
+    <link rel="stylesheet" href="styles/login.css">
+    <link rel="stylesheet" href="styles/playlists.css"> <!-- 新增：我的歌单样式 -->
+    
+    <!-- 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+    /* 折叠按钮样式 */
+    .collapse-btn {
+        position: fixed;
+        z-index: 1000;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .collapse-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .collapse-btn i {
+        font-size: 18px;
+        transition: transform 0.3s ease;
+    }
+
+    /* 搜索栏折叠按钮位置 */
+    .collapse-header-btn {
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+    }
+
+    /* 播放器折叠按钮位置 */
+    .collapse-player-btn {
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+    }
+
+    /* 当搜索栏隐藏时的按钮位置调整 */
+    .netease-header.hidden + .collapse-header-btn {
+        top: 10px;
+        right: 10px;
+    }
+
+    /* 当播放器隐藏时的按钮位置调整 */
+    .netease-player.hidden + .collapse-player-btn {
+        bottom: 10px;
+        right: 10px;
+    }
+
+    /* 隐藏状态的样式 */
+    .netease-header.hidden {
+        transform: translateY(-100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .netease-player.hidden {
+        transform: translateY(100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* 搜索栏和播放器的过渡效果 */
+    .netease-header, .netease-player {
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 当搜索栏隐藏时调整主要内容区 */
+    .netease-header.hidden ~ .main-container {
+        padding-top: 20px;
+    }
+
+    /* 当播放器隐藏时调整页面底部 */
+    .netease-player.hidden {
+        height: 0;
+        overflow: hidden;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .collapse-btn {
+            width: 36px;
+            height: 36px;
+        }
         
-        if (detailData.code === 200 && detailData.songs && detailData.songs[0]) {
-            const song = detailData.songs[0];
-            
-            if (song.fee === 1) {
-                // VIP歌曲，使用专门函数
-                console.log(`检测到VIP歌曲: ${songName}`);
-                const success = await playVIPSong(songId, songName);
+        .collapse-btn i {
+            font-size: 16px;
+        }
+        
+        .collapse-header-btn {
+            top: 10px;
+            right: 10px;
+        }
+        
+        .collapse-player-btn {
+            bottom: 10px;
+            right: 10px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .collapse-btn {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .collapse-btn i {
+            font-size: 14px;
+        }
+    }
+
+    /* 旋转动画 */
+    @keyframes rotateIn {
+        from {
+            transform: rotate(-180deg);
+            opacity: 0;
+        }
+        to {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    @keyframes rotateOut {
+        from {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+        to {
+            transform: rotate(180deg);
+            opacity: 0;
+        }
+    }
+
+    /* 登录按钮样式优化 */
+    .login-btn {
+        position: relative;
+        min-width: 90px;
+        height: 40px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: var(--card-bg);
+        color: var(--text-color);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 15px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .login-btn:hover {
+        background: var(--bg-color);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary-color);
+    }
+
+    .login-btn-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .login-btn-text {
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 60px;
+    }
+
+    .login-btn i {
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }
+
+    .login-btn:hover i {
+        transform: scale(1.1);
+    }
+
+    /* 已登录状态指示器 */
+    .login-btn.logged-in::after {
+        content: '';
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #28a745;
+        animation: pulse 2s infinite;
+        box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 4px rgba(40, 167, 69, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+
+    /* 用户头像样式 */
+    .login-btn .user-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+
+    .login-btn:hover .user-avatar {
+        border-color: var(--primary-color);
+        transform: scale(1.05);
+    }
+
+    /* 暗色主题适配 */
+    [data-theme="dark"] .login-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    [data-theme="dark"] .login-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+        .login-btn {
+            min-width: 40px;
+            padding: 0 10px;
+        }
+        
+        .login-btn-text {
+            max-width: 40px;
+            font-size: 12px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .login-btn {
+            min-width: 40px;
+            width: 40px;
+        }
+        
+        .login-btn-text {
+            display: none;
+        }
+    }
+    </style>
+    
+    <!-- 不再需要引入 QRCode.js，因为使用 API 返回的 base64 图片 -->
+</head>
+
+<body>
+    <!-- 背景覆盖层 -->
+    <div id="backgroundOverlay" class="background-overlay"></div>
+
+    <!-- 搜索栏折叠按钮 -->
+    <button class="collapse-btn collapse-header-btn" id="collapseHeaderBtn" onclick="toggleHeader()">
+        <i class="fas fa-chevron-up" id="headerBtnIcon"></i>
+    </button>
+
+    <!-- 顶部搜索栏 - 直接嵌入 -->
+    <header class="netease-header" id="neteaseHeader">
+        <div class="header-container">
+            <!-- <div class="logo">
+                <i class="fas fa-music"></i>
+                <span>音乐播放器</span>
+            </div> -->
+
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="输入关键词或高级搜索语法..." onkeypress="if(event.key === 'Enter') performSearch()">
+                    <button onclick="clearSearch()" class="clear-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
+                </div>
+
+                <div class="search-options">
+                    <select id="searchType" onchange="updateSearchType()">
+                        <option value="1">单曲</option>
+                        <option value="10">专辑</option>
+                        <option value="100">歌手</option>
+                        <option value="1000">歌单</option>
+                        <option value="1006">歌词</option>
+                        <option value="1004">MV</option>
+                    </select>
+
+                    <select id="searchOrder" onchange="updateSearchParams()">
+                        <option value="hot">按热度</option>
+                        <option value="time">按时间</option>
+                        <option value="score">按评分</option>
+                    </select>
+                </div>
+
+                <button onclick="toggleAdvancedSearch()" class="adv-search-btn" title="高级搜索">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+
+                <button onclick="performSearch()" class="search-btn">
+                    <i class="fas fa-search"></i> 搜索
+                </button>
+            </div>
+
+            <div class="header-actions">
+                <button onclick="toggleTheme()" class="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button onclick="quickExamples()" class="examples-btn" title="搜索示例">
+                    <i class="fas fa-lightbulb"></i>
+                </button>
                 
-                if (!success) {
-                    // 如果专门函数失败，回退到普通播放
-                    await playSong(songId, songName);
-                }
+                <!-- 修改后的登录按钮区域 -->
+                <button class="login-btn" title="点击登录" onclick="login()" id="userLoginBtn">
+                    <div class="login-btn-content">
+                        <i class="fas fa-user"></i>
+                        <span class="login-btn-text" id="loginBtnText">登录</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 高级搜索面板 -->
+        <div class="advanced-search-panel" id="advancedSearchPanel">
+            <div class="advanced-search-content">
+                <h4><i class="fas fa-cog"></i> 高级搜索选项</h4>
+
+                <div class="advanced-filters">
+                    <div class="filter-group">
+                        <label>
+                            <input type="checkbox" id="chkOfficial" checked>
+                            <span>仅官方版本</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="chkHQ">
+                            <span>高品质音质</span>
+                        </label>
+                        <label>
+                            <input type="checkbox" id="chkNoCopyright">
+                            <span>排除无版权</span>
+                        </label>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>时间范围：</label>
+                        <div class="time-filters">
+                            <button class="time-filter active" onclick="setTimeFilter('all')">全部</button>
+                            <button class="time-filter" onclick="setTimeFilter('year')">一年内</button>
+                            <button class="time-filter" onclick="setTimeFilter('month')">一个月内</button>
+                            <button class="time-filter" onclick="setTimeFilter('week')">一周内</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>每页数量：</label>
+                        <input type="range" id="searchLimit" min="10" max="100" value="30" onchange="updateLimitValue()">
+                        <span id="limitValue">30</span>
+                    </div>
+
+                    <div class="search-syntax">
+                        <h5><i class="fas fa-code"></i> 搜索语法提示：</h5>
+                        <ul>
+                            <li><code>lyric:关键词</code> - 搜索歌词</li>
+                            <li><code>-排除词</code> - 排除关键词</li>
+                            <li><code>"精确匹配"</code> - 精确搜索</li>
+                            <li><code>artist:歌手名</code> - 按歌手搜索</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="advanced-actions">
+                    <button onclick="applyAdvancedFilters()" class="btn-primary">
+                        <i class="fas fa-check"></i> 应用筛选
+                    </button>
+                    <button onclick="resetAdvancedFilters()" class="btn-secondary">
+                        <i class="fas fa-redo"></i> 重置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="main-container">
+        <div class="sidebar">
+            <nav class="nav-menu">
+                <a href="#home" class="nav-item active" onclick="switchSection('home')">
+                    <i class="fas fa-home"></i> 主页
+                </a>
+                <a href="#search" class="nav-item" onclick="switchSection('search')">
+                    <i class="fas fa-search"></i> 搜索
+                </a>
+                <!-- <a href="#library" class="nav-item" onclick="switchSection('library')">
+                    <i class="fas fa-music"></i> 音乐库
+                </a> -->
+                <a href="#playlists" class="nav-item" onclick="switchSection('playlists')">
+                    <i class="fas fa-list"></i> 歌单
+                </a>
+                <a href="#lyrics" class="nav-item" onclick="switchSection('lyrics')">
+                    <i class="fas fa-align-left"></i> 歌词
+                </a>
+                <a href="#theme" class="nav-item" onclick="switchSection('theme')">
+                    <i class="fas fa-palette"></i> 主题
+                </a>
+            </nav>
+        </div>
+
+        <div class="content">
+            <!-- 主页内容 -->
+            <section id="home" class="content-section active">
+                <div class="welcome-section">
+                    <h1>音乐播放器</h1>
+                    <p>发现好音乐，享受好时光</p>
+                    <div class="quick-actions">
+                        <button onclick="switchSection('search')" class="btn-primary">
+                            <i class="fas fa-search"></i> 开始搜索
+                        </button>
+                        <button onclick="loadHotSongs()" class="btn-secondary">
+                            <i class="fas fa-fire"></i> 热门歌曲
+                        </button>
+                    </div>
+                </div>
+
+                <div class="recommendations">
+                    <h2><i class="fas fa-star"></i> 推荐歌单</h2>
+                    <div id="playlistsGrid" class="grid-view"></div>
+                </div>
+            </section>
+
+            <!-- 搜索内容 -->
+            <section id="search" class="content-section">
+                <div class="search-results">
+                    <h2><i class="fas fa-search"></i> 搜索结果</h2>
+                    <div id="searchResults" class="results-container"></div>
+                </div>
+            </section>
+
+            <!-- 音乐库 -->
+            <section id="library" class="content-section">
+                <div class="library-content">
+                    <h2><i class="fas fa-music"></i> 我的音乐库</h2>
+                    <div id="libraryContent"></div>
+                </div>
+            </section>
+
+            <!-- 歌单 -->
+            <section id="playlists" class="content-section">
+                <div class="playlists-content">
+                    <h2><i class="fas fa-list"></i> 我的歌单</h2>
+                    <div id="playlistsContent"></div>
+                </div>
+            </section>
+
+            <!-- 歌词页面 -->
+            <section id="lyrics" class="content-section">
+                <div class="lyrics-page">
+                    <div class="lyrics-card" id="lyricsCard">
+                        <div class="lyrics-controls">
+                            <div class="lyrics-buttons">
+                                <button class="lyric-btn" onclick="toggleUIHiddenMode()" id="uiToggleBtn">
+                                    <i class="fas fa-eye-slash"></i>
+                                    <span>隐藏界面</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="lyrics-header">
+                            <div class="lyrics-cover-wrap">
+                                <img id="lyricSongCover" src="https://via.placeholder.com/220" alt="专辑封面">
+                            </div>
+                            <div class="lyrics-info-text">
+                                <div id="lyricSongName" class="lyrics-song-name">未选择歌曲</div>
+                                <div id="lyricArtist" class="lyrics-artist">--</div>
+                            </div>
+                        </div>
+                        <div id="lyricLines" class="lyrics-lines">
+                            <!-- 动态插入歌词 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 主题页面 -->
+            <section id="theme" class="content-section">
+                <div class="theme-container">
+                    <div class="theme-card">
+                        <h2><i class="fas fa-palette"></i> 主题设置</h2>
+                        <div class="theme-options">
+                            <div class="theme-option active" onclick="switchThemeMode('default')">
+                                <h4><i class="fas fa-music"></i> 默认主题</h4>
+                                <p>简洁的界面</p>
+                            </div>
+
+                            <div class="theme-option" onclick="switchThemeMode('cover-blur')" id="coverBlurTheme">
+                                <h4><i class="fas fa-image"></i> 专辑封面背景</h4>
+                                <p>歌曲专辑封面作为模糊背景</p>
+                            </div>
+                        </div>
+
+                        <div class="advanced-filters">
+                            <div class="filter-group">
+                                <h4><i class="fas fa-sliders-h"></i> 高级设置</h4>
+                                <label>
+                                    <input type="range" id="blurIntensity" min="0" max="50" value="30" 
+                                           oninput="updateBlurIntensity(this.value)">
+                                    <span>背景模糊强度: <span id="blurValue">1</span>px</span>
+                                </label>
+
+                                <label>
+                                    <input type="range" id="backgroundOpacity" min="0" max="100" value="40" 
+                                           oninput="updateBackgroundOpacity(this.value)">
+                                    <span>背景透明度: <span id="opacityValue">100</span>%</span>
+                                </label>
+
+                                <label style="margin-top: 15px;">
+                                    <input type="checkbox" id="autoThemeSwitch" checked 
+                                           onchange="toggleAutoThemeSwitch(this.checked)">
+                                    <span>自动随歌曲切换背景</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="theme-current">
+                            <h4><i class="fas fa-info-circle"></i> 当前设置</h4>
+                            <div class="current-settings">
+                                <p>主题模式: <span id="currentThemeMode">专辑封面背景</span></p>
+                                <p>模糊强度: <span id="currentBlurValue">30px</span></p>
+                                <p>背景透明度: <span id="currentOpacityValue">40%</span></p>
+                                <p>自动切换: <span id="currentAutoSwitch">开启</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 播放器折叠按钮 -->
+    <button class="collapse-btn collapse-player-btn" id="collapsePlayerBtn" onclick="togglePlayer()">
+        <i class="fas fa-chevron-down" id="playerBtnIcon"></i>
+    </button>
+
+    <!-- 底部播放器 - 直接嵌入 -->
+    <div class="netease-player" id="neteasePlayer">
+        <div class="player-container">
+            <div class="player-info" onclick="goToLyricsPage()">
+                <img id="currentSongCover" src="https://via.placeholder.com/50" alt="专辑封面">
+                <div class="song-info">
+                    <div id="currentSongName" class="song-name">未选择歌曲</div>
+                    <div id="currentArtist" class="artist-name">--</div>
+                </div>
+            </div>
+
+            <div class="player-controls">
+                <button onclick="previousSong()" class="control-btn">
+                    <i class="fas fa-step-backward"></i>
+                </button>
+                <button onclick="togglePlay()" id="playBtn" class="play-btn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button onclick="nextSong()" class="control-btn">
+                    <i class="fas fa-step-forward"></i>
+                </button>
+            </div>
+
+            <div class="player-progress">
+                <span id="currentTime">0:00</span>
+                <div class="progress-bar" onclick="seekAudio(event)">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span id="durationTime">0:00</span>
+            </div>
+
+            <div class="player-actions">
+                <button onclick="toggleMute()" id="volumeBtn" class="action-btn">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+                <input type="range" id="volumeSlider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
+            </div>
+        </div>
+
+        <audio id="audioElement" ontimeupdate="updateProgress()" onended="nextSong()"></audio>
+    </div>
+
+    <!-- API配置 -->
+    <!-- <div class="api-config-btn" onclick="toggleApiConfig()">
+        <i class="fas fa-cog"></i>
+    </div> -->
+
+    <!-- API配置模态框 -->
+    <!-- <div id="apiConfigModal" class="modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-server"></i> API配置</h3>
+            <input type="text" id="apiBaseUrl" placeholder="输入API地址" value="https://neteaseapi-enhanced.vercel.app">
+            <div class="modal-actions">
+                <button onclick="updateApiBase()" class="btn-primary">保存</button>
+                <button onclick="toggleApiConfig()" class="btn-secondary">取消</button>
+            </div>
+        </div>
+    </div> -->
+
+    <!-- JavaScript 文件 -->
+    <script src="js/netease.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/login.js"></script> <!-- 新增的登录管理器 -->
+    <script src="js/playlists.js"></script> <!-- 新增：我的歌单JS -->
+
+    <script>
+        // 折叠功能管理
+        let isHeaderVisible = true;
+        let isPlayerVisible = true;
+
+        // 切换搜索栏显示/隐藏
+        function toggleHeader() {
+            const header = document.getElementById('neteaseHeader');
+            const headerBtn = document.getElementById('collapseHeaderBtn');
+            const headerBtnIcon = document.getElementById('headerBtnIcon');
+            
+            isHeaderVisible = !isHeaderVisible;
+            
+            if (isHeaderVisible) {
+                // 显示搜索栏
+                header.classList.remove('hidden');
+                headerBtnIcon.className = 'fas fa-chevron-up';
+                headerBtn.setAttribute('title', '隐藏搜索栏');
+                headerBtnIcon.style.animation = 'rotateIn 0.3s ease-out';
             } else {
-                // 非VIP歌曲，使用普通播放
-                await playSong(songId, songName);
+                // 隐藏搜索栏
+                header.classList.add('hidden');
+                headerBtnIcon.className = 'fas fa-chevron-down';
+                headerBtn.setAttribute('title', '显示搜索栏');
+                headerBtnIcon.style.animation = 'rotateOut 0.3s ease-in';
             }
-        } else {
-            // 无法获取详情，使用普通播放
-            await playSong(songId, songName);
-        }
-    } catch (error) {
-        console.error('增强播放失败:', error);
-        // 出错时回退到普通播放
-        await playSong(songId, songName);
-    }
-};
-class EnhancedSearch {
-    constructor() {
-        this.currentPage = 1;
-        this.itemsPerPage = 30;
-        this.totalResults = 0;
-        this.totalPages = 1;
-        this.currentView = 'grid'; // 'list' or 'grid'
-        this.searchParams = {
-            keywords: '',
-            type: 1,
-            order: 'hot',
-            limit: 30,
-            offset: 0,
-            filters: {
-                official: true,
-                highQuality: false,
-                excludeNoCopyright: false,
-                timeRange: 'all'
-            }
-        };
-
-        this.searchHistory = JSON.parse(localStorage.getItem('netease_search_history') || '[]');
-        this.init();
-    }
-
-    init() {
-        this.bindEvents();
-        this.loadSearchHistory();
-        this.setupSearchSyntax();
-    }
-
-    bindEvents() {
-        // 搜索输入事件
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => this.handleInput(e.target.value));
-            searchInput.addEventListener('focus', () => this.showSuggestions());
-        }
-
-        // 点击其他地方关闭建议
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.search-box')) {
-                this.hideSuggestions();
-            }
-        });
-
-        // 监听高级搜索选项变化
-        const checkboxes = ['chkOfficial', 'chkHQ', 'chkNoCopyright'];
-        checkboxes.forEach(id => {
-            const checkbox = document.getElementById(id);
-            if (checkbox) {
-                checkbox.addEventListener('change', () => this.updateFilters());
-            }
-        });
-
-        // 监听搜索类型变化
-        const searchType = document.getElementById('searchType');
-        if (searchType) {
-            searchType.addEventListener('change', () => this.updateSearchType());
-        }
-    }
-
-    // 处理搜索输入
-    handleInput(value) {
-        if (value.length === 0) {
-            this.hideSuggestions();
-            return;
-        }
-
-        if (value.length > 1) {
-            this.showSearchSuggestions(value);
-        }
-    }
-
-    // 显示搜索建议
-    async showSearchSuggestions(query) {
-        const suggestionsDiv = document.getElementById('searchSuggestions');
-        if (!suggestionsDiv) return;
-
-        suggestionsDiv.innerHTML = '';
-
-        // 历史记录建议
-        const historySuggestions = this.searchHistory
-            .filter(item => item.keywords.toLowerCase().includes(query.toLowerCase()))
-            .slice(0, 5);
-
-        // 热门搜索建议
-        const hotSuggestions = [
-            { type: 'hot', text: '周杰伦 最新歌曲', keywords: '周杰伦' },
-            { type: 'hot', text: '抖音热门歌曲', keywords: '抖音 热门' },
-            { type: 'hot', text: '工作学习纯音乐', keywords: '纯音乐 轻音乐' },
-            { type: 'hot', text: '经典老歌回忆', keywords: '经典 老歌' },
-            { type: 'hot', text: '英文歌曲推荐', keywords: '英文 歌曲' }
-        ];
-
-        // 构建建议列表
-        let suggestionsHTML = '';
-
-        // 历史记录
-        if (historySuggestions.length > 0) {
-            historySuggestions.forEach(item => {
-                suggestionsHTML += `
-                    <div class="suggestion-item" onclick="enhancedSearch.selectSuggestion('${item.keywords.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-history"></i>
-                        <span>${this.highlightText(item.keywords, query)}</span>
-                    </div>
-                `;
-            });
-        }
-
-        // 热门搜索
-        hotSuggestions.forEach(item => {
-            if (item.keywords.toLowerCase().includes(query.toLowerCase())) {
-                suggestionsHTML += `
-                    <div class="suggestion-item" onclick="enhancedSearch.selectSuggestion('${item.keywords.replace(/'/g, "\\'")}')">
-                        <i class="fas fa-fire"></i>
-                        <span>${this.highlightText(item.text, query)}</span>
-                    </div>
-                `;
-            }
-        });
-
-        // 如果没有建议，显示提示
-        if (!suggestionsHTML) {
-            suggestionsHTML = `
-                <div class="suggestion-item">
-                    <i class="fas fa-info-circle"></i>
-                    <span>输入更多关键词获取建议</span>
-                </div>
-            `;
-        }
-
-        suggestionsDiv.innerHTML = suggestionsHTML;
-        suggestionsDiv.classList.add('show');
-    }
-
-    // 高亮匹配文本
-    highlightText(text, query) {
-        if (!query) return text;
-
-        const regex = new RegExp(`(${this.escapeRegExp(query)})`, 'gi');
-        return text.replace(regex, '<span class="suggestion-highlight">$1</span>');
-    }
-
-    escapeRegExp(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    // 选择建议
-    selectSuggestion(keywords) {
-        document.getElementById('searchInput').value = keywords;
-        this.hideSuggestions();
-        this.performSearch();
-    }
-
-    // 隐藏建议
-    hideSuggestions() {
-        const suggestionsDiv = document.getElementById('searchSuggestions');
-        if (suggestionsDiv) {
-            suggestionsDiv.classList.remove('show');
-        }
-    }
-
-    // 显示建议
-    showSuggestions() {
-        const input = document.getElementById('searchInput');
-        if (input.value.length > 0) {
-            this.showSearchSuggestions(input.value);
-        }
-    }
-
-    // 执行搜索
-    async performSearch() {
-        const keywords = document.getElementById('searchInput').value.trim();
-        if (!keywords) {
-            alert('请输入搜索关键词');
-            return;
-        }
-
-        // 保存到历史记录
-        this.saveToHistory(keywords);
-
-        // 更新搜索参数
-        this.searchParams.keywords = keywords;
-        this.searchParams.type = parseInt(document.getElementById('searchType').value);
-        this.searchParams.order = document.getElementById('searchOrder').value;
-        this.searchParams.limit = this.itemsPerPage;
-        this.searchParams.offset = (this.currentPage - 1) * this.itemsPerPage;
-
-        // 显示搜索界面
-        switchSection('search');
-
-        const resultsContainer = document.getElementById('searchResults');
-        resultsContainer.innerHTML = `
-            <div class="loading-container">
-                <div class="spinner"></div>
-                <div class="loading-text">正在搜索"${keywords}"...</div>
-            </div>
-        `;
-
-        try {
-            const startTime = Date.now();
-            const data = await this.fetchSearchData();
-            const endTime = Date.now();
-
-            this.displaySearchResults(data, endTime - startTime);
-
-        } catch (error) {
-            console.error('搜索失败:', error);
-            resultsContainer.innerHTML = `
-                <div class="error">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <h3>搜索失败</h3>
-                    <p>${error.message || '请检查网络连接'}</p>
-                </div>
-            `;
-        }
-    }
-
-    // 获取搜索数据
-    async fetchSearchData() {
-        const params = {
-            keywords: this.searchParams.keywords,
-            type: this.searchParams.type,
-            limit: this.searchParams.limit,
-            offset: this.searchParams.offset
-        };
-
-        if (this.searchParams.order !== 'hot') {
-            params.order = this.searchParams.order;
-        }
-
-        const url = buildApiUrl('/cloudsearch', params);
-        const response = await fetch(url);
-        return await response.json();
-    }
-
-    // 显示搜索结果
-    displaySearchResults(data, responseTime) {
-        if (data.code !== 200) {
-            throw new Error(data.message || '搜索失败');
-        }
-
-        const resultsContainer = document.getElementById('searchResults');
-        const result = data.result || {};
-
-        // 更新统计信息
-        this.totalResults = result.songCount || result.albumCount || result.artistCount || result.playlistCount || 0;
-        this.totalPages = Math.ceil(this.totalResults / this.itemsPerPage);
-
-        // 构建结果HTML
-        let html = this.buildResultsHeader(responseTime);
-
-        if (this.totalResults === 0) {
-            html += this.buildEmptyState();
-        } else {
-            html += this.buildResultsContent(result);
-            html += this.buildPagination();
-        }
-
-        resultsContainer.innerHTML = html;
-
-        // 更新视图切换按钮
-        this.setupViewToggle();
-    }
-
-    // 构建结果头部
-    buildResultsHeader(responseTime) {
-        return `
-            <div class="search-results-header">
-                <div class="search-stats">
-                    <div class="stat-item">
-                        <div class="stat-value">${this.totalResults.toLocaleString()}</div>
-                        <div class="stat-label">总数</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${responseTime}ms</div>
-                        <div class="stat-label">耗时</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${this.currentPage}</div>
-                        <div class="stat-label">页码</div>
-                    </div>
-                </div>
-                
-                <div class="view-toggle">
-                    <button class="view-btn ${this.currentView === 'list' ? 'active' : ''}" onclick="enhancedSearch.switchView('list')">
-                        <i class="fas fa-list"></i> 列表
-                    </button>
-                    <button class="view-btn ${this.currentView === 'grid' ? 'active' : ''}" onclick="enhancedSearch.switchView('grid')">
-                        <i class="fas fa-th-large"></i> 网格
-                    </button>
-                </div>
-            </div>
             
-            <div class="results-view" id="resultsView">
-        `;
-    }
-
-    // 构建结果内容
-    buildResultsContent(result) {
-        let content = '';
-
-        switch (this.searchParams.type) {
-            case 1: // 单曲
-                content = this.buildSongsContent(result.songs || []);
-                break;
-            case 10: // 专辑
-                content = this.buildAlbumsContent(result.albums || []);
-                break;
-            case 100: // 歌手
-                content = this.buildArtistsContent(result.artists || []);
-                break;
-            case 1000: // 歌单
-                content = this.buildPlaylistsContent(result.playlists || []);
-                break;
-            default:
-                content = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+            // 保存状态到localStorage
+            localStorage.setItem('headerVisible', isHeaderVisible);
+            
+            // 动画结束后清除动画
+            setTimeout(() => {
+                headerBtnIcon.style.animation = '';
+            }, 300);
         }
 
-        return content;
-    }
-
-    // 构建歌曲内容
-    buildSongsContent(songs) {
-        if (this.currentView === 'list') {
-            return this.buildSongsListView(songs);
-        } else {
-            return this.buildSongsGridView(songs);
+        // 切换播放器显示/隐藏
+        function togglePlayer() {
+            const player = document.getElementById('neteasePlayer');
+            const playerBtn = document.getElementById('collapsePlayerBtn');
+            const playerBtnIcon = document.getElementById('playerBtnIcon');
+            
+            isPlayerVisible = !isPlayerVisible;
+            
+            if (isPlayerVisible) {
+                // 显示播放器
+                player.classList.remove('hidden');
+                playerBtnIcon.className = 'fas fa-chevron-down';
+                playerBtn.setAttribute('title', '隐藏播放器');
+                playerBtnIcon.style.animation = 'rotateIn 0.3s ease-out';
+            } else {
+                // 隐藏播放器
+                player.classList.add('hidden');
+                playerBtnIcon.className = 'fas fa-chevron-up';
+                playerBtn.setAttribute('title', '显示播放器');
+                playerBtnIcon.style.animation = 'rotateOut 0.3s ease-in';
+            }
+            
+            // 保存状态到localStorage
+            localStorage.setItem('playerVisible', isPlayerVisible);
+            
+            // 动画结束后清除动画
+            setTimeout(() => {
+                playerBtnIcon.style.animation = '';
+            }, 300);
         }
-    }
 
-    // 列表视图
-    buildSongsListView(songs) {
-        let html = '<div class="list-view">';
-
-        songs.forEach((song, index) => {
-            const artists = song.ar ? song.ar.map(artist => artist.name).join(', ') : '未知';
-            const album = song.al ? song.al.name : '未知';
-            const duration = Math.floor(song.dt / 1000);
-            const minutes = Math.floor(duration / 60);
-            const seconds = duration % 60;
-
-            html += `
-                <div class="song-item">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <span style="width: 30px; text-align: center; color: #666;">${index + 1}</span>
-                        <img src="${song.al?.picUrl || 'https://via.placeholder.com/50'}?param=50y50" 
-                             style="width: 50px; height: 50px; border-radius: 8px;">
-                        <div style="flex: 1;">
-                            <div class="song-card-title">${song.name}</div>
-                            <div class="song-card-meta">${artists} · ${album}</div>
-                        </div>
-                        <span style="color: #666;">${minutes}:${seconds.toString().padStart(2, '0')}</span>
-                        <div class="song-card-actions">
-                            <button class="song-card-btn" onclick="playSong(${song.id}, '${song.name.replace(/'/g, "\\'")}')" title="播放">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="song-card-btn secondary" onclick="this.showSongDetails(${song.id})" title="详情">
-                                <i class="fas fa-info-circle"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // 网格视图
-    buildSongsGridView(songs) {
-        let html = '<div class="grid-view">';
-
-        songs.forEach(song => {
-            const artists = song.ar ? song.ar.map(artist => artist.name).join(', ') : '未知';
-
-            html += `
-                <div class="song-card">
-                    <img src="${song.al?.picUrl || 'https://via.placeholder.com/300'}?param=300y200" alt="${song.name}">
-                    <div class="song-card-content">
-                        <div class="song-card-title">${song.name}</div>
-                        <div class="song-card-meta">${artists}</div>
-                        <div class="song-card-actions">
-                            <button class="song-card-btn" onclick="playSong(${song.id}, '${song.name.replace(/'/g, "\\'")}')">
-                                <i class="fas fa-play"></i> 播放
-                            </button>
-                            <button class="song-card-btn secondary" onclick="this.addToPlaylist(${song.id})">
-                                <i class="fas fa-plus"></i> 收藏
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // 构建专辑内容
-    buildAlbumsContent(albums) {
-        let html = '<div class="grid-view">';
-
-        albums.forEach(album => {
-            const artist = album.artist ? album.artist.name : '未知';
-            const year = album.publishTime ? new Date(album.publishTime).getFullYear() : '未知';
-
-            html += `
-                <div class="song-card">
-                    <img src="${album.picUrl || 'https://via.placeholder.com/300'}?param=300y200" alt="${album.name}">
-                    <div class="song-card-content">
-                        <div class="song-card-title">${album.name}</div>
-                        <div class="song-card-meta">${artist} · ${year}</div>
-                        <div class="song-card-actions">
-                            <button class="song-card-btn" onclick="enhancedSearch.viewAlbum(${album.id})">
-                                <i class="fas fa-eye"></i> 查看
-                            </button>
-                            <button class="song-card-btn secondary" onclick="enhancedSearch.playAlbum(${album.id})">
-                                <i class="fas fa-play"></i> 播放
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // 构建歌手内容
-    buildArtistsContent(artists) {
-        let html = '<div class="grid-view">';
-
-        artists.forEach(artist => {
-            const albumCount = artist.albumSize || 0;
-            const musicCount = artist.musicSize || 0;
-
-            html += `
-                <div class="song-card">
-                    <img src="${artist.picUrl || 'https://via.placeholder.com/300'}?param=300y200" alt="${artist.name}">
-                    <div class="song-card-content">
-                        <div class="song-card-title">${artist.name}</div>
-                        <div class="song-card-meta">${albumCount}专辑 · ${musicCount}歌曲</div>
-                        <div class="song-card-actions">
-                            <button class="song-card-btn" onclick="enhancedSearch.viewArtist(${artist.id})">
-                                <i class="fas fa-user"></i> 主页
-                            </button>
-                            <button class="song-card-btn secondary" onclick="enhancedSearch.playArtistTop(${artist.id})">
-                                <i class="fas fa-play"></i> 热门
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // 构建歌单内容
-    buildPlaylistsContent(playlists) {
-        let html = '<div class="grid-view">';
-
-        playlists.forEach(playlist => {
-            const creator = playlist.creator ? playlist.creator.nickname : '未知';
-            const playCount = playlist.playCount ? this.formatNumber(playlist.playCount) : '0';
-
-            html += `
-                <div class="song-card">
-                    <img src="${playlist.coverImgUrl || 'https://via.placeholder.com/300'}?param=300y200" alt="${playlist.name}">
-                    <div class="song-card-content">
-                        <div class="song-card-title">${playlist.name}</div>
-                        <div class="song-card-meta">${creator} · ${playCount}播放</div>
-                        <div class="song-card-actions">
-                            <button class="song-card-btn" onclick="enhancedSearch.viewPlaylist(${playlist.id})">
-                                <i class="fas fa-eye"></i> 查看
-                            </button>
-                            <button class="song-card-btn secondary" onclick="enhancedSearch.playPlaylist(${playlist.id})">
-                                <i class="fas fa-play"></i> 播放
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        return html;
-    }
-
-    // 构建空状态
-    buildEmptyState() {
-        return `
-            </div> <!-- 关闭 results-view -->
-            <div class="empty-state">
-                <i class="fas fa-search"></i>
-                <h3>未找到相关结果</h3>
-                <p>尝试使用不同的关键词或调整搜索类型</p>
-            </div>
-        `;
-    }
-
-    // 构建分页
-    buildPagination() {
-        return `
-            </div> <!-- 关闭 results-view -->
-            <div class="pagination">
-                <button class="page-btn" onclick="enhancedSearch.previousPage()" ${this.currentPage <= 1 ? 'disabled' : ''}>
-                    <i class="fas fa-chevron-left"></i> 上一页
-                </button>
+        // 恢复折叠状态
+        function restoreCollapseStates() {
+            // 检查localStorage中的状态
+            const savedHeaderVisible = localStorage.getItem('headerVisible');
+            const savedPlayerVisible = localStorage.getItem('playerVisible');
+            
+            if (savedHeaderVisible !== null) {
+                isHeaderVisible = savedHeaderVisible === 'true';
+                const header = document.getElementById('neteaseHeader');
+                const headerBtnIcon = document.getElementById('headerBtnIcon');
                 
-                ${this.buildPageNumbers()}
+                if (!isHeaderVisible) {
+                    header.classList.add('hidden');
+                    headerBtnIcon.className = 'fas fa-chevron-down';
+                    document.getElementById('collapseHeaderBtn').setAttribute('title', '显示搜索栏');
+                }
+            }
+            
+            if (savedPlayerVisible !== null) {
+                isPlayerVisible = savedPlayerVisible === 'true';
+                const player = document.getElementById('neteasePlayer');
+                const playerBtnIcon = document.getElementById('playerBtnIcon');
                 
-                <button class="page-btn" onclick="enhancedSearch.nextPage()" ${this.currentPage >= this.totalPages ? 'disabled' : ''}>
-                    下一页 <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-        `;
-    }
-
-    // 构建页码按钮
-    buildPageNumbers() {
-        let pagesHTML = '';
-        const maxPages = 5;
-
-        let startPage = Math.max(1, this.currentPage - Math.floor(maxPages / 2));
-        let endPage = Math.min(this.totalPages, startPage + maxPages - 1);
-
-        if (endPage - startPage + 1 < maxPages) {
-            startPage = Math.max(1, endPage - maxPages + 1);
+                if (!isPlayerVisible) {
+                    player.classList.add('hidden');
+                    playerBtnIcon.className = 'fas fa-chevron-up';
+                    document.getElementById('collapsePlayerBtn').setAttribute('title', '显示播放器');
+                }
+            }
         }
 
-        for (let i = startPage; i <= endPage; i++) {
-            pagesHTML += `
-                <button class="page-btn ${i === this.currentPage ? 'active' : ''}" onclick="enhancedSearch.goToPage(${i})">
-                    ${i}
-                </button>
-            `;
+        // 初始化折叠按钮
+        function initCollapseButtons() {
+            // 设置初始标题
+            document.getElementById('collapseHeaderBtn').setAttribute('title', '隐藏搜索栏');
+            document.getElementById('collapsePlayerBtn').setAttribute('title', '隐藏播放器');
+            
+            // 恢复之前的折叠状态
+            restoreCollapseStates();
         }
 
-        return pagesHTML;
-    }
-
-    // 分页控制
-    previousPage() {
-        if (this.currentPage > 1) {
-            this.currentPage--;
-            this.performSearch();
+        // 初始化应用
+        function initApp() {
+            console.log('开始初始化应用...');
+            
+            // 设置主题
+            if (typeof setupTheme === 'function') {
+                setupTheme();
+            }
+            
+            // 初始化折叠按钮
+            initCollapseButtons();
+            
+            // 初始化播放器
+            if (typeof initPlayer === 'function') {
+                console.log('初始化播放器...');
+                initPlayer();
+            }
+            
+            // 初始化搜索功能
+            if (typeof initEnhancedSearch === 'function') {
+                console.log('初始化搜索功能...');
+                initEnhancedSearch();
+            }
+            
+            // 初始化主题管理器
+            if (typeof initThemeManager === 'function') {
+                console.log('初始化主题管理器...');
+                initThemeManager();
+            }
+            
+            // 初始化登录管理器
+            if (typeof initLoginManager === 'function') {
+                console.log('初始化登录管理器...');
+                initLoginManager();
+            }
+            
+            // 初始化歌单管理器
+            if (typeof initPlaylistManager === 'function') {
+                console.log('初始化歌单管理器...');
+                initPlaylistManager();
+            }
+            
+            console.log('应用初始化完成！');
         }
-    }
 
-    nextPage() {
-        if (this.currentPage < this.totalPages) {
-            this.currentPage++;
-            this.performSearch();
-        }
-    }
+        // 使用 window.onload 确保所有资源加载完成
+        window.onload = function() {
+            console.log('页面加载完成，开始初始化应用...');
+            initApp();
+        };
 
-    goToPage(page) {
-        if (page >= 1 && page <= this.totalPages && page !== this.currentPage) {
-            this.currentPage = page;
-            this.performSearch();
-        }
-    }
-
-    // 切换视图
-    switchView(view) {
-        this.currentView = view;
-        this.performSearch(); // 重新搜索以更新视图
-    }
-
-    setupViewToggle() {
-        // 视图切换按钮已在 buildResultsHeader 中设置
-    }
-
-    // 格式化数字
-    formatNumber(num) {
-        if (num >= 100000000) {
-            return (num / 100000000).toFixed(1) + '亿';
-        } else if (num >= 10000) {
-            return (num / 10000).toFixed(1) + '万';
-        }
-        return num.toString();
-    }
-
-    // 保存到历史记录
-    saveToHistory(keywords) {
-        // 移除重复
-        this.searchHistory = this.searchHistory.filter(item => item.keywords !== keywords);
-
-        // 添加到开头
-        this.searchHistory.unshift({
-            keywords: keywords,
-            timestamp: Date.now(),
-            type: this.searchParams.type
+        // 备选方案：如果 window.onload 不行，使用以下代码
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 触发，延迟初始化...');
+            
+            // 添加一个延迟，确保 DOM 完全构建
+            setTimeout(() => {
+                initApp();
+            }, 100);
         });
 
-        // 保持最多20条记录
-        if (this.searchHistory.length > 20) {
-            this.searchHistory.pop();
-        }
-
-        localStorage.setItem('netease_search_history', JSON.stringify(this.searchHistory));
-        this.updateHistoryDisplay();
-    }
-
-    // 加载搜索历史
-    loadSearchHistory() {
-        this.updateHistoryDisplay();
-    }
-
-    // 更新历史显示
-    updateHistoryDisplay() {
-        const historyDiv = document.getElementById('searchHistory');
-        if (!historyDiv) return;
-
-        if (this.searchHistory.length === 0) {
-            historyDiv.style.display = 'none';
-            return;
-        }
-
-        let html = '<h4><i class="fas fa-history"></i> 搜索历史</h4><div class="history-tags">';
-
-        this.searchHistory.slice(0, 10).forEach(item => {
-            html += `
-                <span class="history-tag" onclick="enhancedSearch.selectHistory('${item.keywords.replace(/'/g, "\\'")}')">
-                    ${item.keywords}
-                </span>
-            `;
+        // 全局快捷键支持
+        document.addEventListener('keydown', function(event) {
+            // Ctrl+H 切换搜索栏 (H for Header)
+            if (event.ctrlKey && event.key === 'h') {
+                event.preventDefault();
+                toggleHeader();
+            }
+            
+            // Ctrl+P 切换播放器 (P for Player)
+            if (event.ctrlKey && event.key === 'p') {
+                event.preventDefault();
+                togglePlayer();
+            }
+            
+            // Ctrl+Shift+H 同时切换搜索栏和播放器
+            if (event.ctrlKey && event.shiftKey && event.key === 'H') {
+                event.preventDefault();
+                toggleHeader();
+                togglePlayer();
+            }
         });
 
-        html += '</div>';
-        historyDiv.innerHTML = html;
-        historyDiv.style.display = 'block';
-    }
-
-    // 选择历史记录
-    selectHistory(keywords) {
-        document.getElementById('searchInput').value = keywords;
-        this.performSearch();
-    }
-
-    // 设置搜索语法帮助
-    setupSearchSyntax() {
-        // 在搜索框添加语法提示
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.title = '搜索语法提示：\n' +
-                'lyric:关键词 - 搜索歌词\n' +
-                '-排除词 - 排除关键词\n' +
-                '"精确匹配" - 精确搜索\n' +
-                'artist:歌手名 - 按歌手搜索';
-        }
-    }
-
-    // 更新搜索类型
-    updateSearchType() {
-        const type = parseInt(document.getElementById('searchType').value);
-        this.searchParams.type = type;
-
-        // 根据类型调整排序选项
-        const orderSelect = document.getElementById('searchOrder');
-        if (type === 1) { // 单曲
-            orderSelect.innerHTML = `
-                <option value="hot">按热度</option>
-                <option value="time">按时间</option>
-                <option value="score">按评分</option>
-            `;
-        } else { // 其他类型
-            orderSelect.innerHTML = `
-                <option value="hot">按热度</option>
-                <option value="new">按最新</option>
-            `;
-        }
-    }
-
-    // 更新筛选器
-    updateFilters() {
-        this.searchParams.filters.official = document.getElementById('chkOfficial').checked;
-        this.searchParams.filters.highQuality = document.getElementById('chkHQ').checked;
-        this.searchParams.filters.excludeNoCopyright = document.getElementById('chkNoCopyright').checked;
-    }
-
-    // 设置时间筛选
-    setTimeFilter(range) {
-        this.searchParams.filters.timeRange = range;
-
-        // 更新UI
-        document.querySelectorAll('.time-filter').forEach(btn => {
-            btn.classList.remove('active');
+        // 添加折叠按钮的工具提示
+        document.addEventListener('mouseover', function(event) {
+            if (event.target.closest('.collapse-btn')) {
+                const btn = event.target.closest('.collapse-btn');
+                if (!btn.hasAttribute('data-tooltip-added')) {
+                    btn.setAttribute('data-tooltip-added', 'true');
+                    btn.addEventListener('mouseenter', function() {
+                        this.setAttribute('data-show-tooltip', 'true');
+                    });
+                    btn.addEventListener('mouseleave', function() {
+                        this.removeAttribute('data-show-tooltip');
+                    });
+                }
+            }
         });
-        event.target.classList.add('active');
-    }
+    </script>
 
-    // 更新每页数量
-    updateLimitValue() {
-        const limitSlider = document.getElementById('searchLimit');
-        const limitValue = document.getElementById('limitValue');
-        const value = parseInt(limitSlider.value);
+    <style>
+        /* 工具提示样式 */
+        .collapse-btn[data-show-tooltip]::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1002;
+            margin-bottom: 8px;
+            pointer-events: none;
+            animation: fadeIn 0.2s ease-out;
+        }
 
-        limitValue.textContent = value;
-        this.itemsPerPage = value;
-        this.searchParams.limit = value;
-    }
+        .collapse-btn[data-show-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.8);
+            margin-bottom: -2px;
+            z-index: 1002;
+            pointer-events: none;
+            animation: fadeIn 0.2s ease-out;
+        }
 
-    // 应用高级筛选
-    applyAdvancedFilters() {
-        this.updateFilters();
-        this.performSearch();
-        this.toggleAdvancedSearch();
-    }
-
-    // 重置高级筛选
-    resetAdvancedFilters() {
-        document.getElementById('chkOfficial').checked = true;
-        document.getElementById('chkHQ').checked = false;
-        document.getElementById('chkNoCopyright').checked = false;
-
-        document.querySelectorAll('.time-filter').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector('.time-filter').classList.add('active');
-
-        this.searchParams.filters.timeRange = 'all';
-
-        const limitSlider = document.getElementById('searchLimit');
-        limitSlider.value = 30;
-        this.updateLimitValue();
-    }
-
-    // 切换高级搜索面板
-    toggleAdvancedSearch() {
-        const panel = document.getElementById('advancedSearchPanel');
-        panel.classList.toggle('show');
-    }
-
-    // 快速示例
-    quickExamples() {
-        const examples = [
-            '无限暖暖',
-            '日式摇滚',
-            'jpop',
-            'yoasobi',
-            '初音未来',
-            '百闻牌'
-        ];
-
-        const randomExample = examples[Math.floor(Math.random() * examples.length)];
-        document.getElementById('searchInput').value = randomExample;
-        this.performSearch();
-    }
-
-    // 清空搜索
-    clearSearch() {
-        document.getElementById('searchInput').value = '';
-        document.getElementById('searchResults').innerHTML = '';
-        this.hideSuggestions();
-    }
-
-    // 扩展功能方法
-    showSongDetails(songId) {
-        // 简单的详情显示
-        alert(`歌曲ID: ${songId}\n点击播放按钮可以试听歌曲`);
-    }
-
-    addToPlaylist(songId) {
-        alert(`歌曲ID: ${songId}\n已添加到播放列表（功能演示）`);
-    }
-
-    viewAlbum(albumId) {
-        alert(`专辑ID: ${albumId}\n查看专辑详情（功能演示）`);
-    }
-
-    playAlbum(albumId) {
-        alert(`播放专辑: ${albumId}\n（功能演示）`);
-    }
-
-    viewArtist(artistId) {
-        alert(`歌手ID: ${artistId}\n查看歌手主页（功能演示）`);
-    }
-
-    playArtistTop(artistId) {
-        alert(`播放歌手热门歌曲: ${artistId}\n（功能演示）`);
-    }
-
-    viewPlaylist(playlistId) {
-        alert(`歌单ID: ${playlistId}\n查看歌单详情（功能演示）`);
-    }
-
-    playPlaylist(playlistId) {
-        alert(`播放歌单: ${playlistId}\n（功能演示）`);
-    }
-}
-
-// 创建增强搜索实例
-let enhancedSearch;
-
-// 初始化增强搜索
-function initEnhancedSearch() {
-    enhancedSearch = new EnhancedSearch();
-}
-
-// 在页面加载完成后初始化
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEnhancedSearch);
-} else {
-    initEnhancedSearch();
-}
-
-// 暴露全局函数
-window.performSearch = () => enhancedSearch.performSearch();
-window.clearSearch = () => enhancedSearch.clearSearch();
-window.toggleAdvancedSearch = () => enhancedSearch.toggleAdvancedSearch();
-window.quickExamples = () => enhancedSearch.quickExamples();
-window.setTimeFilter = (range) => enhancedSearch.setTimeFilter(range);
-window.updateLimitValue = () => enhancedSearch.updateLimitValue();
-window.applyAdvancedFilters = () => enhancedSearch.applyAdvancedFilters();
-window.resetAdvancedFilters = () => enhancedSearch.resetAdvancedFilters();
-window.updateSearchType = () => enhancedSearch.updateSearchType();
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</body>
+</html>
