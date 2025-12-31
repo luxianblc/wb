@@ -1,0 +1,248 @@
+<header class="netease-header">
+    <div class="header-container">
+        <div class="logo">
+            <i class="fas fa-music"></i>
+            <span>音乐播放器</span>
+        </div>
+
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="输入关键词或高级搜索语法..." onkeypress="if(event.key === 'Enter') performSearch()">
+                <button onclick="clearSearch()" class="clear-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+
+            <div class="search-options">
+                <select id="searchType" onchange="updateSearchType()">
+                    <option value="1">单曲</option>
+                    <option value="10">专辑</option>
+                    <option value="100">歌手</option>
+                    <option value="1000">歌单</option>
+                    <option value="1006">歌词</option>
+                    <option value="1004">MV</option>
+                </select>
+
+                <select id="searchOrder" onchange="updateSearchParams()">
+                    <option value="hot">按热度</option>
+                    <option value="time">按时间</option>
+                    <option value="score">按评分</option>
+                </select>
+            </div>
+
+            <button onclick="toggleAdvancedSearch()" class="adv-search-btn" title="高级搜索">
+                <i class="fas fa-sliders-h"></i>
+            </button>
+
+            <button onclick="performSearch()" class="search-btn">
+                <i class="fas fa-search"></i> 智能搜索
+            </button>
+        </div>
+
+        <div class="header-actions">
+            <button onclick="toggleTheme()" class="theme-toggle">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button onclick="quickExamples()" class="examples-btn" title="搜索示例">
+                <i class="fas fa-lightbulb"></i>
+            </button>
+            
+            <!-- 修改后的登录按钮区域 -->
+            <!-- 修改后的登录按钮区域 -->
+            <button class="login-btn" title="点击登录" onclick="login()" id="userLoginBtn">
+                <div class="login-btn-content">
+                    <i class="fas fa-user"></i>
+                    <span class="login-btn-text" id="loginBtnText">登录</span>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- 高级搜索面板 -->
+    <div class="advanced-search-panel" id="advancedSearchPanel">
+        <div class="advanced-search-content">
+            <h4><i class="fas fa-cog"></i> 高级搜索选项</h4>
+
+            <div class="advanced-filters">
+                <div class="filter-group">
+                    <label>
+                        <input type="checkbox" id="chkOfficial" checked>
+                        <span>仅官方版本</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chkHQ">
+                        <span>高品质音质</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chkNoCopyright">
+                        <span>排除无版权</span>
+                    </label>
+                </div>
+
+                <div class="filter-group">
+                    <label>时间范围：</label>
+                    <div class="time-filters">
+                        <button class="time-filter active" onclick="setTimeFilter('all')">全部</button>
+                        <button class="time-filter" onclick="setTimeFilter('year')">一年内</button>
+                        <button class="time-filter" onclick="setTimeFilter('month')">一个月内</button>
+                        <button class="time-filter" onclick="setTimeFilter('week')">一周内</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label>每页数量：</label>
+                    <input type="range" id="searchLimit" min="10" max="100" value="30" onchange="updateLimitValue()">
+                    <span id="limitValue">30</span>
+                </div>
+
+                <div class="search-syntax">
+                    <h5><i class="fas fa-code"></i> 搜索语法提示：</h5>
+                    <ul>
+                        <li><code>lyric:关键词</code> - 搜索歌词</li>
+                        <li><code>-排除词</code> - 排除关键词</li>
+                        <li><code>"精确匹配"</code> - 精确搜索</li>
+                        <li><code>artist:歌手名</code> - 按歌手搜索</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="advanced-actions">
+                <button onclick="applyAdvancedFilters()" class="btn-primary">
+                    <i class="fas fa-check"></i> 应用筛选
+                </button>
+                <button onclick="resetAdvancedFilters()" class="btn-secondary">
+                    <i class="fas fa-redo"></i> 重置
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<style>
+/* 登录按钮样式优化 */
+.login-btn {
+    position: relative;
+    min-width: 90px;
+    height: 40px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 15px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.login-btn:hover {
+    background: var(--bg-color);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color);
+}
+
+.login-btn-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.login-btn-text {
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60px;
+}
+
+.login-btn i {
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* 已登录状态指示器 */
+.login-btn.logged-in::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #28a745;
+    animation: pulse 2s infinite;
+    box-shadow: 0 0 0 rgba(40, 167, 69, 0.4);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 4px rgba(40, 167, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
+}
+
+/* 用户头像样式 */
+.login-btn .user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.login-btn:hover .user-avatar {
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+/* 暗色主题适配 */
+[data-theme="dark"] .login-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .login-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .login-btn {
+        min-width: 40px;
+        padding: 0 10px;
+    }
+    
+    .login-btn-text {
+        max-width: 40px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-btn {
+        min-width: 40px;
+        width: 40px;
+    }
+    
+    .login-btn-text {
+        display: none;
+    }
+}
+</style>

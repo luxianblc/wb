@@ -1,0 +1,40 @@
+<div class="netease-player">
+    <div class="player-container">
+        <div class="player-info" onclick="goToLyricsPage()">
+            <img id="currentSongCover" src="https://via.placeholder.com/50" alt="专辑封面">
+            <div class="song-info">
+                <div id="currentSongName" class="song-name">未选择歌曲</div>
+                <div id="currentArtist" class="artist-name">--</div>
+            </div>
+        </div>
+
+        <div class="player-controls">
+            <button onclick="previousSong()" class="control-btn">
+                <i class="fas fa-step-backward"></i>
+            </button>
+            <button onclick="togglePlay()" id="playBtn" class="play-btn">
+                <i class="fas fa-play"></i>
+            </button>
+            <button onclick="nextSong()" class="control-btn">
+                <i class="fas fa-step-forward"></i>
+            </button>
+        </div>
+
+        <div class="player-progress">
+            <span id="currentTime">0:00</span>
+            <div class="progress-bar" onclick="seekAudio(event)">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <span id="durationTime">0:00</span>
+        </div>
+
+        <div class="player-actions">
+            <button onclick="toggleMute()" id="volumeBtn" class="action-btn">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <input type="range" id="volumeSlider" min="0" max="100" value="80" oninput="changeVolume(this.value)">
+        </div>
+    </div>
+
+    <audio id="audioElement" ontimeupdate="updateProgress()" onended="nextSong()"></audio>
+</div>
