@@ -39,7 +39,7 @@ class EnhancedSearch {
         this.itemsPerPage = 30;
         this.totalResults = 0;
         this.totalPages = 1;
-        this.currentView = 'list'; // 'list' or 'grid'
+        this.currentView = 'grid'; // 'list' or 'grid'
         this.searchParams = {
             keywords: '',
             type: 1,
