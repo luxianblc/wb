@@ -14,7 +14,11 @@ let player = {
 const lyricsUI = {
     uiHidden: false,
     exitBtn: null,
-    isInitialized: false
+    isInitialized: false,
+    fullscreenContainer: null,
+    fullscreenLyricsContainer: null,
+    isScrollingToLyric: false, // 防止滚动冲突
+    lastLyricIndex: -1 // 记录上次歌词索引，避免重复滚动
 };
 
 // ===== 播放器核心功能 =====
@@ -367,6 +371,7 @@ function enterFullscreenMode() {
         fullscreenContainer = document.createElement('div');
         fullscreenContainer.className = 'lyrics-fullscreen-container';
         document.body.appendChild(fullscreenContainer);
+        lyricsUI.fullscreenContainer = fullscreenContainer;
     }
     
     // 获取封面图片
@@ -398,6 +403,9 @@ function enterFullscreenMode() {
     fullscreenContainer.style.display = 'block';
     document.body.classList.add('lyrics-fullscreen-active');
     
+    // 获取歌词容器引用
+    lyricsUI.fullscreenLyricsContainer = document.getElementById('fullscreenLyricLines');
+    
     // 渲染全屏歌词
     renderFullscreenLyrics();
     
@@ -406,6 +414,10 @@ function enterFullscreenMode() {
     
     // 开始监听时间更新
     startFullscreenTimeUpdate();
+    
+    // 重置滚动状态
+    lyricsUI.isScrollingToLyric = false;
+    lyricsUI.lastLyricIndex = -1;
 }
 
 // 退出全屏模式
@@ -441,11 +453,15 @@ function exitUIHiddenMode() {
     
     // 停止时间更新监听
     stopFullscreenTimeUpdate();
+    
+    // 重置滚动状态
+    lyricsUI.isScrollingToLyric = false;
+    lyricsUI.lastLyricIndex = -1;
 }
 
-// 渲染全屏歌词（使用和普通模式相同的渲染逻辑）
+// 渲染全屏歌词
 function renderFullscreenLyrics(emptyText) {
-    const container = document.getElementById('fullscreenLyricLines');
+    const container = lyricsUI.fullscreenLyricsContainer;
     if (!container) return;
 
     // 清空容器
@@ -464,7 +480,7 @@ function renderFullscreenLyrics(emptyText) {
         return;
     }
 
-    // 构建歌词HTML（和普通模式完全一样）
+    // 构建歌词HTML
     let lyricsHTML = '';
     
     for (let i = 0; i < player.lyrics.length; i++) {
@@ -482,18 +498,24 @@ function renderFullscreenLyrics(emptyText) {
     
     container.innerHTML = lyricsHTML;
     
-    // 滚动到当前歌词（使用和普通模式相同的逻辑）
+    // 如果有当前歌词，滚动到合适位置
     if (player.currentLyricIndex >= 0) {
         setTimeout(() => {
             scrollToActiveFullscreenLyric();
-        }, 50);
+        }, 100);
     }
 }
 
-// 滚动到当前歌词（全屏模式，使用和普通模式相同的逻辑）
+// 滚动到当前歌词（全屏模式） - 修复版
 function scrollToActiveFullscreenLyric() {
-    const container = document.getElementById('fullscreenLyricLines');
-    if (!container) return;
+    const container = lyricsUI.fullscreenLyricsContainer;
+    if (!container || !lyricsUI.uiHidden) return;
+    
+    // 防止重复滚动
+    if (lyricsUI.isScrollingToLyric || player.currentLyricIndex < 0) return;
+    
+    // 避免相同歌词的重复滚动
+    if (lyricsUI.lastLyricIndex === player.currentLyricIndex) return;
     
     const activeElement = container.querySelector('.fullscreen-lyric-line.active');
     if (!activeElement) return;
@@ -501,18 +523,34 @@ function scrollToActiveFullscreenLyric() {
     const lyricContainer = activeElement.closest('.fullscreen-lyric-container');
     if (!lyricContainer) return;
     
-    // 和普通模式一样的滚动逻辑：将当前歌词滚动到容器1/3位置
-    const offsetTop = activeElement.offsetTop;
-    const containerHeight = container.clientHeight;
+    // 设置滚动状态
+    lyricsUI.isScrollingToLyric = true;
+    lyricsUI.lastLyricIndex = player.currentLyricIndex;
     
+    // 计算完美的居中位置
+    const containerHeight = container.clientHeight;
+    const activeElementRect = activeElement.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    
+    // 计算歌词行在容器中的相对位置
+    const targetScrollTop = activeElement.offsetTop - (containerHeight / 2) + (activeElementRect.height / 2);
+    
+    // 平滑滚动到中心位置
     container.scrollTo({
-        top: Math.max(0, offsetTop - containerHeight / 3),
+        top: Math.max(0, targetScrollTop),
         behavior: 'smooth'
     });
+    
+    // 重置滚动状态（延迟，避免快速滚动冲突）
+    setTimeout(() => {
+        lyricsUI.isScrollingToLyric = false;
+    }, 500);
 }
 
 // 更新全屏时间显示
 function updateFullscreenTime() {
+    if (!lyricsUI.uiHidden) return;
+    
     const audio = document.getElementById('audioElement');
     const currentTimeEl = document.getElementById('fullscreenCurrentTime');
     const durationTimeEl = document.getElementById('fullscreenDurationTime');
@@ -540,11 +578,6 @@ function startFullscreenTimeUpdate() {
             const audio = document.getElementById('audioElement');
             if (audio) {
                 updateLyricHighlight(audio.currentTime * 1000);
-                
-                // 更新全屏歌词高亮
-                if (lyricsUI.uiHidden) {
-                    updateFullscreenLyricHighlight();
-                }
             }
         }
     }, 100);
@@ -562,7 +595,7 @@ function stopFullscreenTimeUpdate() {
 function updateFullscreenLyricHighlight() {
     if (!lyricsUI.uiHidden || !player.lyrics || player.lyrics.length === 0) return;
     
-    const container = document.getElementById('fullscreenLyricLines');
+    const container = lyricsUI.fullscreenLyricsContainer;
     if (!container) return;
     
     // 移除所有歌词的高亮
@@ -575,8 +608,10 @@ function updateFullscreenLyricHighlight() {
         if (currentLine) {
             currentLine.classList.add('active');
             
-            // 滚动到合适位置（使用相同的逻辑）
-            scrollToActiveFullscreenLyric();
+            // 滚动到合适位置（只在歌词变化时才滚动）
+            if (lyricsUI.lastLyricIndex !== player.currentLyricIndex) {
+                scrollToActiveFullscreenLyric();
+            }
         }
     }
 }
@@ -610,6 +645,7 @@ async function loadLyrics(songId) {
             if (lyricsText) {
                 player.lyrics = parseLrc(lyricsText);
                 player.currentLyricIndex = -1;
+                lyricsUI.lastLyricIndex = -1; // 重置歌词索引
                 renderLyrics();
                 
                 // 如果全屏模式开启，也更新全屏歌词
@@ -666,7 +702,7 @@ function parseLrc(lrcText) {
     return result;
 }
 
-// 渲染歌词
+// 渲染歌词（普通模式）
 function renderLyrics(emptyText) {
     const container = document.getElementById('lyricLines');
     if (!container) return;
@@ -721,7 +757,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// 滚动到当前歌词
+// 滚动到当前歌词（普通模式）
 function scrollToActiveLyric() {
     const container = document.getElementById('lyricLines');
     if (!container) return;
@@ -742,7 +778,7 @@ function scrollToActiveLyric() {
     });
 }
 
-// 更新歌词高亮
+// 更新歌词高亮（同时更新普通模式和全屏模式）
 function updateLyricHighlight(currentMs) {
     if (!player.lyrics || player.lyrics.length === 0) return;
 
@@ -778,24 +814,24 @@ function updateLyricHighlight(currentMs) {
 
     player.currentLyricIndex = newIndex;
     
-    // 更新DOM显示
-    const container = document.getElementById('lyricLines');
-    if (!container) return;
-    
-    // 移除所有歌词的高亮
-    const allLines = container.querySelectorAll('.lyric-line');
-    allLines.forEach(line => line.classList.remove('active'));
-    
-    // 高亮当前歌词行
-    const currentLine = container.querySelector(`.lyric-container[data-index="${newIndex}"] .lyric-line`);
-    if (currentLine) {
-        currentLine.classList.add('active');
+    // 更新普通模式DOM显示
+    const normalContainer = document.getElementById('lyricLines');
+    if (normalContainer) {
+        // 移除所有歌词的高亮
+        const allLines = normalContainer.querySelectorAll('.lyric-line');
+        allLines.forEach(line => line.classList.remove('active'));
         
-        // 自动滚动到合适位置
-        scrollToActiveLyric();
+        // 高亮当前歌词行
+        const currentLine = normalContainer.querySelector(`.lyric-container[data-index="${newIndex}"] .lyric-line`);
+        if (currentLine) {
+            currentLine.classList.add('active');
+            
+            // 自动滚动到合适位置
+            scrollToActiveLyric();
+        }
     }
     
-    // 同时更新全屏歌词
+    // 更新全屏模式歌词高亮
     if (lyricsUI.uiHidden) {
         updateFullscreenLyricHighlight();
     }
@@ -992,26 +1028,33 @@ function addNotificationStyles() {
             overflow-y: auto;
             text-align: center;
             scroll-behavior: smooth;
+            /* 允许用户滚动 */
+            -webkit-overflow-scrolling: touch;
         }
         
         .fullscreen-lyric-container {
-            margin: 15px 0;
-            padding: 10px 0;
+            margin: 20px 0;
+            padding: 12px 0;
+            transition: transform 0.3s ease;
         }
         
         .fullscreen-lyric-line {
             font-size: 20px;
             line-height: 1.6;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.6);
             margin: 0;
             transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 8px;
         }
         
         .fullscreen-lyric-line.active {
             color: white;
             font-size: 26px;
             font-weight: 600;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            text-shadow: 0 2px 10px rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
         }
         
         .fullscreen-controls {
@@ -1074,10 +1117,22 @@ function addNotificationStyles() {
             overflow: hidden !important;
         }
         
-        /* 隐藏滚动条 */
+        /* 隐藏滚动条但保持可滚动 */
         .fullscreen-lyrics::-webkit-scrollbar {
-            width: 0;
+            width: 6px;
+        }
+        
+        .fullscreen-lyrics::-webkit-scrollbar-track {
             background: transparent;
+        }
+        
+        .fullscreen-lyrics::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .fullscreen-lyrics::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
     `;
     document.head.appendChild(style);
